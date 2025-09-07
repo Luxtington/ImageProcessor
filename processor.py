@@ -16,7 +16,7 @@ class ImageProcessorApp:
     def __init__(self, root):
         # Конструктор класса - инициализация приложения
         self.root = root  # Главное окно приложения
-        self.root.title("Image Processor")  # Заголовок окна
+        self.root.title("Image Processor App")  # Заголовок окна
         self.root.geometry("1200x800")  # Размер окна (ширина x высота)
 
         # Переменные для хранения изображений
@@ -28,94 +28,76 @@ class ImageProcessorApp:
         self.setup_ui()  # Создаем интерфейс
 
     def setup_ui(self):
-        # Создание пользовательского интерфейса
-
-        # Главный фрейм (контейнер) с отступами 10 пикселей
+        # Главный фрейм
         main_frame = ttk.Frame(self.root, padding="10")
-        # Размещаем фрейм в сетке: row=0, column=0, растягиваем во все стороны
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-        # Левый панель для элементов управления (кнопки, слайдеры)
-        left_panel = ttk.Frame(main_frame, width=300)  # Ширина 300 пикселей
-        left_panel.grid(row=0, column=0, sticky=(tk.N, tk.S), padx=(0, 10))  # Выравнивание по вертикали
-        left_panel.grid_propagate(False)  # Запрещаем автоматическое изменение размера
+        # Настройка растягивания
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
+        main_frame.columnconfigure(0, weight=0)  # Левая панель
+        main_frame.columnconfigure(1, weight=1)  # Правая панель
+        main_frame.rowconfigure(0, weight=1)
 
-        # Правая панель для отображения изображения
+        # Левая панель — прокручиваемая
+        left_scrolled = VerticalScrolledFrame(main_frame, width=300)
+        left_scrolled.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.W), padx=(0, 10))
+        left_panel = left_scrolled.interior  # Это твой внутренний фрейм для кнопок
+
+        # Правая панель
         right_panel = ttk.Frame(main_frame)
-        right_panel.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))  # Растягиваем на все доступное пространство
+        right_panel.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))
+        right_panel.columnconfigure(0, weight=1)
+        right_panel.rowconfigure(0, weight=1)
 
-        # Настройка весов сетки для правильного растягивания
-        self.root.columnconfigure(0, weight=1)  # Колонка 0 главного окна растягивается
-        self.root.rowconfigure(0, weight=1)  # Строка 0 главного окна растягивается
-        main_frame.columnconfigure(1, weight=1)  # Колонка 1 главного фрейма растягивается
-        main_frame.rowconfigure(0, weight=1)  # Строка 0 главного фрейма растягивается
-
-        # Кнопка загрузки изображения
+        # Все твои элементы — в left_panel, как раньше
         ttk.Button(left_panel, text="Загрузить изображение",
                    command=self.load_image).grid(row=0, column=0, pady=5, sticky=tk.W)
 
-        # Кнопка сохранения изображения
         ttk.Button(left_panel, text="Сохранить изображение",
                    command=self.save_image).grid(row=1, column=0, pady=5, sticky=tk.W)
 
-        # Текстовое поле для информации об изображении
         self.info_text = tk.Text(left_panel, height=15, width=35)
         self.info_text.grid(row=2, column=0, pady=10, sticky=tk.W)
 
-        # Разделитель
         ttk.Separator(left_panel, orient='horizontal').grid(row=3, column=0, pady=10, sticky=tk.W + tk.E)
 
-        # Кнопки и элементы управления обработкой изображений
-
-        # Преобразование в оттенки серого
         ttk.Button(left_panel, text="В градации серого",
                    command=self.convert_to_grayscale).grid(row=4, column=0, pady=5, sticky=tk.W)
 
-        # Слайдер для яркости
         ttk.Label(left_panel, text="Яркость:").grid(row=5, column=0, pady=5, sticky=tk.W)
-        self.brightness_var = tk.DoubleVar(value=1.0)  # Переменная для хранения значения яркости
+        self.brightness_var = tk.DoubleVar(value=1.0)
         ttk.Scale(left_panel, from_=0.1, to=2.0, variable=self.brightness_var,
                   command=self.adjust_brightness).grid(row=6, column=0, pady=5, sticky=tk.W + tk.E)
 
-        # Слайдер для насыщенности
         ttk.Label(left_panel, text="Насыщенность:").grid(row=7, column=0, pady=5, sticky=tk.W)
-        self.saturation_var = tk.DoubleVar(value=1.0)  # Переменная для насыщенности
+        self.saturation_var = tk.DoubleVar(value=1.0)
         ttk.Scale(left_panel, from_=0.1, to=2.0, variable=self.saturation_var,
                   command=self.adjust_saturation).grid(row=8, column=0, pady=5, sticky=tk.W + tk.E)
 
-        # Слайдер для контрастности
         ttk.Label(left_panel, text="Контрастность:").grid(row=9, column=0, pady=5, sticky=tk.W)
-        self.contrast_var = tk.DoubleVar(value=1.0)  # Переменная для контрастности
+        self.contrast_var = tk.DoubleVar(value=1.0)
         ttk.Scale(left_panel, from_=0.1, to=2.0, variable=self.contrast_var,
                   command=self.adjust_contrast).grid(row=10, column=0, pady=5, sticky=tk.W + tk.E)
 
-        # Кнопка показа гистограммы
         ttk.Button(left_panel, text="Показать гистограмму",
                    command=self.show_histogram).grid(row=11, column=0, pady=5, sticky=tk.W)
 
-        # Кнопка поворота изображения
         ttk.Button(left_panel, text="Поворот на 90°",
                    command=self.rotate_image).grid(row=12, column=0, pady=5, sticky=tk.W)
 
-        # Кнопка линейной коррекции
         ttk.Button(left_panel, text="Линейная коррекция",
                    command=self.linear_correction).grid(row=13, column=0, pady=5, sticky=tk.W)
 
-        # Кнопка нелинейной коррекции
         ttk.Button(left_panel, text="Нелинейная коррекция",
                    command=self.nonlinear_correction).grid(row=14, column=0, pady=5, sticky=tk.W)
 
-        # Кнопка сброса изменений
         ttk.Button(left_panel, text="Сбросить изменения",
                    command=self.reset_changes).grid(row=15, column=0, pady=5, sticky=tk.W)
 
-        # Метка для отображения изображения
+        # Метка для изображения
         self.image_label = ttk.Label(right_panel)
         self.image_label.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-
-        # Настройка растягивания правой панели
-        right_panel.columnconfigure(0, weight=1)
-        right_panel.rowconfigure(0, weight=1)
 
     def load_image(self):
         # Загрузка изображения через диалоговое окно
@@ -358,6 +340,45 @@ class ImageProcessorApp:
                 except Exception as e:
                     messagebox.showerror("Ошибка", f"Не удалось сохранить изображение: {str(e)}")
 
+class VerticalScrolledFrame(ttk.Frame):
+    def __init__(self, parent, *args, **kw):
+        ttk.Frame.__init__(self, parent, *args, **kw)
+
+        # Создаем канвас + фрейм внутри + скроллбар
+        vscrollbar = ttk.Scrollbar(self, orient=tk.VERTICAL)
+        vscrollbar.pack(fill=tk.Y, side=tk.RIGHT, expand=False)
+
+        canvas = tk.Canvas(self, bd=0, highlightthickness=0, yscrollcommand=vscrollbar.set)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        vscrollbar.config(command=canvas.yview)
+
+        # Сбрасываем положение при открытии
+        canvas.xview_moveto(0)
+        canvas.yview_moveto(0)
+
+        # Создаем внутренний фрейм
+        self.interior = interior = ttk.Frame(canvas)
+        interior_id = canvas.create_window(0, 0, window=interior, anchor=tk.NW)
+
+        # Прокрутка колесом
+        def _on_mousewheel(event):
+            canvas.yview_scroll(-1 * int(event.delta / 120), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        interior.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # Обновляем размеры при изменении внутреннего фрейма
+        def _configure_interior(event):
+            size = (interior.winfo_reqwidth(), interior.winfo_reqheight())
+            canvas.config(scrollregion="0 0 %s %s" % size)
+            if interior.winfo_reqwidth() != canvas.winfo_width():
+                canvas.config(width=interior.winfo_reqwidth())
+        interior.bind('<Configure>', _configure_interior)
+
+        # Обновляем ширину canvas при изменении размера
+        def _configure_canvas(event):
+            if interior.winfo_reqwidth() != canvas.winfo_width():
+                canvas.itemconfigure(interior_id, width=canvas.winfo_width())
+        canvas.bind('<Configure>', _configure_canvas)
 
 def main():
     # Главная функция приложения
