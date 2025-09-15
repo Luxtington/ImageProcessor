@@ -60,40 +60,43 @@ class ImageProcessorApp:
         self.info_text = tk.Text(left_panel, height=15, width=35)
         self.info_text.grid(row=2, column=0, pady=10, sticky=tk.W)
 
-        ttk.Separator(left_panel, orient='horizontal').grid(row=3, column=0, pady=10, sticky=tk.W + tk.E)
+        ttk.Button(left_panel, text="Скопировать текст",
+                   command=self.copy_text).grid(row=3, column=0, pady=5, sticky=tk.W)
+
+        ttk.Separator(left_panel, orient='horizontal').grid(row=4, column=0, pady=10, sticky=tk.W + tk.E)
 
         ttk.Button(left_panel, text="В градации серого",
-                   command=self.convert_to_grayscale).grid(row=4, column=0, pady=5, sticky=tk.W)
+                   command=self.convert_to_grayscale).grid(row=5, column=0, pady=5, sticky=tk.W)
 
-        ttk.Label(left_panel, text="Яркость:").grid(row=5, column=0, pady=5, sticky=tk.W)
+        ttk.Label(left_panel, text="Яркость:").grid(row=6, column=0, pady=5, sticky=tk.W)
         self.brightness_var = tk.DoubleVar(value=1.0)
         ttk.Scale(left_panel, from_=0.1, to=2.0, variable=self.brightness_var,
-                  command=self.adjust_brightness).grid(row=6, column=0, pady=5, sticky=tk.W + tk.E)
+                  command=self.adjust_brightness).grid(row=7, column=0, pady=5, sticky=tk.W + tk.E)
 
-        ttk.Label(left_panel, text="Насыщенность:").grid(row=7, column=0, pady=5, sticky=tk.W)
+        ttk.Label(left_panel, text="Насыщенность:").grid(row=8, column=0, pady=5, sticky=tk.W)
         self.saturation_var = tk.DoubleVar(value=1.0)
         ttk.Scale(left_panel, from_=0.1, to=2.0, variable=self.saturation_var,
-                  command=self.adjust_saturation).grid(row=8, column=0, pady=5, sticky=tk.W + tk.E)
+                  command=self.adjust_saturation).grid(row=9, column=0, pady=5, sticky=tk.W + tk.E)
 
-        ttk.Label(left_panel, text="Контрастность:").grid(row=9, column=0, pady=5, sticky=tk.W)
+        ttk.Label(left_panel, text="Контрастность:").grid(row=10, column=0, pady=5, sticky=tk.W)
         self.contrast_var = tk.DoubleVar(value=1.0)
         ttk.Scale(left_panel, from_=0.1, to=2.0, variable=self.contrast_var,
-                  command=self.adjust_contrast).grid(row=10, column=0, pady=5, sticky=tk.W + tk.E)
+                  command=self.adjust_contrast).grid(row=11, column=0, pady=5, sticky=tk.W + tk.E)
 
         ttk.Button(left_panel, text="Показать гистограмму",
-                   command=self.show_histogram).grid(row=11, column=0, pady=5, sticky=tk.W)
+                   command=self.show_histogram).grid(row=12, column=0, pady=5, sticky=tk.W)
 
         ttk.Button(left_panel, text="Поворот на 90°",
-                   command=self.rotate_image).grid(row=12, column=0, pady=5, sticky=tk.W)
+                   command=self.rotate_image).grid(row=13, column=0, pady=5, sticky=tk.W)
 
         ttk.Button(left_panel, text="Линейная коррекция",
-                   command=self.linear_correction).grid(row=13, column=0, pady=5, sticky=tk.W)
+                   command=self.linear_correction).grid(row=14, column=0, pady=5, sticky=tk.W)
 
         ttk.Button(left_panel, text="Нелинейная коррекция",
-                   command=self.nonlinear_correction).grid(row=14, column=0, pady=5, sticky=tk.W)
+                   command=self.nonlinear_correction).grid(row=15, column=0, pady=5, sticky=tk.W)
 
         ttk.Button(left_panel, text="Сбросить изменения",
-                   command=self.reset_changes).grid(row=15, column=0, pady=5, sticky=tk.W)
+                   command=self.reset_changes).grid(row=16, column=0, pady=5, sticky=tk.W)
 
         # Метка для изображения
         self.image_label = ttk.Label(right_panel)
@@ -107,8 +110,8 @@ class ImageProcessorApp:
 
         if file_path:
             try:
-                self.image_path = file_path  # Сохраняем путь к файлу
-                self.original_image = Image.open(file_path)  # Открываем изображение через PIL
+                self.image_path = file_path # Сохраняем путь к файлу
+                self.original_image = ImageOps.exif_transpose(Image.open(file_path))
                 self.processed_image = self.original_image.copy()  # Создаем копию для обработки
                 self.display_image()  # Отображаем изображение
                 self.update_image_info()  # Обновляем информацию
@@ -117,7 +120,6 @@ class ImageProcessorApp:
                 self.saturation_var.set(1.0)
                 self.contrast_var.set(1.0)
             except Exception as e:
-                # Обработка ошибок загрузки
                 messagebox.showerror("Ошибка", f"Не удалось загрузить изображение: {str(e)}")
 
     def display_image(self):
@@ -224,9 +226,6 @@ class ImageProcessorApp:
 
                 all_exif = self.original_image.getexif()
 
-                info += "\n" + "=" * 50 + "\n"
-                info += "ОТОБРАЖАЕМЫЕ ТЕГИ:\n"
-
                 displayed_count = 0
                 for tag_id, value in all_exif.items():
                     if tag_id in target_tags and displayed_count < 10:
@@ -246,6 +245,22 @@ class ImageProcessorApp:
 
         except Exception as e:
             messagebox.showerror("Ошибка", f"Не удалось получить информацию: {str(e)}")
+
+    def copy_text(self):
+        try:
+            # Получаем весь текст из текстового поля
+            text_to_copy = self.info_text.get(1.0, tk.END).strip()
+
+            # Очищаем буфер обмена и добавляем туда текст
+            self.root.clipboard_clear()
+            self.root.clipboard_append(text_to_copy)
+
+            # Сообщаем пользователю об успешном копировании
+            messagebox.showinfo("Успех", "Текст скопирован в буфер обмена")
+
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось скопировать текст: {str(e)}")
+
 
     def convert_to_grayscale(self):
         # Преобразование изображения в оттенки серого
