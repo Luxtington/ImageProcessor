@@ -109,7 +109,6 @@ class ImageProcessorApp:
             try:
                 self.image_path = file_path  # Сохраняем путь к файлу
                 self.original_image = Image.open(file_path)  # Открываем изображение через PIL
-                self.photo_exif = self.original_image.getexif()
                 self.processed_image = self.original_image.copy()  # Создаем копию для обработки
                 self.display_image()  # Отображаем изображение
                 self.update_image_info()  # Обновляем информацию
@@ -130,8 +129,8 @@ class ImageProcessorApp:
             image.thumbnail(max_size, Image.Resampling.LANCZOS)  # Изменяем размер с высоким качеством
 
             # Конвертируем изображение для Tkinter
-            photo = ImageTk.PhotoImage(image)
-            self.image_label.configure(image=photo)  # Устанавливаем изображение в метку
+            photo = ImageTk.PhotoImage(image) #данные изображения, которые Tkinter может отобразить.
+            self.image_label.configure(image=photo)  # Устанавливаем изображение в метку.  Виджет теперь знает, что ему нужно отрисовать это изображение.
             self.image_label.image = photo  # Сохраняем ссылку (важно для предотвращения сборки мусора)
 
     def update_image_info(self):
@@ -161,26 +160,87 @@ class ImageProcessorApp:
             else:
                 info += f"Глубина цвета: информация о режиме {img.mode}\n"
 
-            if self.photo_exif:
+            if self.original_image.getexif():
                 info += "\nEXIF информация:\n"
-                exif_count = 0
-                for tag_id, value in self.photo_exif.items():
-                    tag = TAGS.get(tag_id, tag_id)  # Получаем человеко-читаемое имя тега
-                    # Показываем только основные EXIF-теги
-                    if tag in ['DateTime', 'Make', 'Model', 'ExposureTime', 'FNumber', 'ISOSpeedRatings']:
-                        info += f"{tag}: {value}\n"
-                        exif_count += 1
-                    if exif_count >= 5:  # Ограничиваем количество EXIF-информации
-                        break
+
+                # ЖЕСТКИЙ СПИСОК ТЕГОВ КОТОРЫЕ МЫ ХОТИМ ВЫВЕСТИ
+                target_tags = {
+                    306: 'DateTime',  # Дата и время
+                    272: 'Model',  # Модель камеры
+                    274: 'Orientation',  # Ориентация
+                    305: 'Software',  # Программное обеспечение
+                    33437: 'FNumber',  # Диафрагма
+                    33434: 'ExposureTime',  # Выдержка
+                    34855: 'ISOSpeedRatings',  # ISO
+                    37386: 'FocalLength',  # Фокусное расстояние
+                    42036: 'LensModel',  # Модель объектива
+                    41986: 'ExposureMode',  # Режим экспозиции
+                    41987: 'WhiteBalance',  # Баланс белого
+                    41988: 'DigitalZoomRatio',  # Цифровой зум
+                    41989: 'FocalLengthIn35mmFilm',  # Эквивалентное фокусное расстояние
+                    41990: 'SceneCaptureType',  # Тип сцены
+                    41991: 'GainControl',  # Управление усилением
+                    41992: 'Contrast',  # Контраст
+                    41993: 'Saturation',  # Насыщенность
+                    41994: 'Sharpness',  # Резкость
+                    33432: 'Copyright',  # Авторские права
+                    315: 'Artist',  # Автор
+                    316: 'HostComputer',  # Компьютер
+                    282: 'XResolution',  # Разрешение по X
+                    283: 'YResolution',  # Разрешение по Y
+                    296: 'ResolutionUnit',  # Единица разрешения
+                    531: 'YCbCrPositioning',  # Позиционирование YCbCr
+                    34665: 'ExifOffset',  # Смещение EXIF
+                    33445: 'Flash',  # Вспышка
+                    36867: 'DateTimeOriginal',  # Дата съемки
+                    36868: 'DateTimeDigitized',  # Дата оцифровки
+                    37377: 'ShutterSpeedValue',  # Значение выдержки
+                    37378: 'ApertureValue',  # Значение диафрагмы
+                    37379: 'BrightnessValue',  # Значение яркости
+                    37380: 'ExposureBiasValue',  # Компенсация экспозиции
+                    37381: 'MaxApertureValue',  # Максимальная диафрагма
+                    37382: 'SubjectDistance',  # Расстояние до объекта
+                    37383: 'MeteringMode',  # Режим замера
+                    37384: 'LightSource',  # Источник света
+                    37396: 'SubjectArea',  # Область объекта
+                    41486: 'FocalPlaneXResolution',  # Разрешение фокальной плоскости X
+                    41487: 'FocalPlaneYResolution',  # Разрешение фокальной плоскости Y
+                    41488: 'FocalPlaneResolutionUnit',  # Единица разрешения фокальной плоскости
+                    41492: 'SubjectLocation',  # Расположение объекта
+                    41493: 'ExposureIndex',  # Индекс экспозиции
+                    41495: 'SensingMethod',  # Метод сенсора
+                    41728: 'FileSource',  # Источник файла
+                    41729: 'SceneType',  # Тип сцены
+                    41730: 'CFAPattern',  # Паттерн CFA
+                    41985: 'FlashPixVersion',  # Версия FlashPix
+                    41995: 'SubjectDistanceRange',  # Диапазон расстояния до объекта
+                    42016: 'ImageUniqueID',  # Уникальный ID изображения
+                    42017: 'CameraOwnerName',  # Имя владельца камеры
+                    42018: 'BodySerialNumber',  # Серийный номер корпуса
+                    42019: 'LensSpecification',  # Спецификация объектива
+                    42020: 'LensMake',  # Производитель объектива
+                    42022: 'LensSerialNumber',  # Серийный номер объектива
+                }
+
+                all_exif = self.original_image.getexif()
+
+                info += "\n" + "=" * 50 + "\n"
+                info += "ОТОБРАЖАЕМЫЕ ТЕГИ:\n"
+
+                displayed_count = 0
+                for tag_id, value in all_exif.items():
+                    if tag_id in target_tags and displayed_count < 10:
+                        tag_name = target_tags[tag_id]
+                        info += f"{tag_name}: {value}\n"
+                        displayed_count += 1
+
             else:
                 info += "\nEXIF информация отсутствует (загрузите фото напрямую с камеры, так как приложения автоматически удаляют EXIF при загрузке)\n"
 
-            # Дополнительная информация
             info += f"\nДополнительная информация:\n"
             info += f"Соотношение сторон: {img.width / img.height:.2f}\n"
             info += f"Общее количество пикселей: {img.width * img.height}\n"
 
-            # Очищаем и заполняем текстовое поле
             self.info_text.delete(1.0, tk.END)
             self.info_text.insert(1.0, info)
 
