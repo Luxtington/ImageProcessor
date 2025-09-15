@@ -29,12 +29,26 @@ class ImageProcessorApp:
 
     def setup_ui(self):
         # Главный фрейм
+        # Настройка темы и стилей (только визуальные изменения)
+        style = ttk.Style()
+        try:
+            style.theme_use('clam')
+        except Exception:
+            pass
+        style.configure('TButton', padding=(10, 6))
+        style.configure('TLabel', font=('Segoe UI', 10))
+        style.configure('Header.TLabel', font=('Segoe UI', 12, 'bold'))
+        style.configure('Card.TLabelframe', padding=10)
+        style.configure('Card.TLabelframe.Label', font=('Segoe UI', 11, 'bold'))
+        style.configure('Horizontal.TScale', troughcolor='#e6e6e6')
+
         main_frame = ttk.Frame(self.root, padding="10")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
         # Настройка растягивания
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
+        self.root.rowconfigure(1, weight=0)
         main_frame.columnconfigure(0, weight=0)  # Левая панель
         main_frame.columnconfigure(1, weight=1)  # Правая панель
         main_frame.rowconfigure(0, weight=1)
@@ -49,6 +63,12 @@ class ImageProcessorApp:
         right_panel.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))
         right_panel.columnconfigure(0, weight=1)
         right_panel.rowconfigure(0, weight=1)
+
+        # Оформленный блок предпросмотра
+        preview_frame = ttk.Labelframe(right_panel, text='Предпросмотр', style='Card.TLabelframe')
+        preview_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        preview_frame.columnconfigure(0, weight=1)
+        preview_frame.rowconfigure(0, weight=1)
 
         # Все твои элементы — в left_panel, как раньше
         ttk.Button(left_panel, text="Загрузить изображение",
@@ -99,8 +119,12 @@ class ImageProcessorApp:
                    command=self.reset_changes).grid(row=16, column=0, pady=5, sticky=tk.W)
 
         # Метка для изображения
-        self.image_label = ttk.Label(right_panel)
-        self.image_label.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.image_label = ttk.Label(preview_frame)
+        self.image_label.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
+
+        # Статус-бар
+        self.status_label = ttk.Label(self.root, text='Готово', anchor='w', relief='sunken', padding=(10, 2))
+        self.status_label.grid(row=1, column=0, sticky=(tk.W, tk.E))
 
     def load_image(self):
         # Загрузка изображения через диалоговое окно
