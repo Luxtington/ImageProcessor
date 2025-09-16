@@ -1,20 +1,14 @@
-# Импортируем необходимые библиотеки
-import tkinter as tk  # Основная библиотека для создания графического интерфейса (GUI)
-from tkinter import ttk, filedialog, messagebox  # Дополнительные компоненты GUI:
-# ttk - стилизованные виджеты, filedialog - диалоги выбора файлов, messagebox - всплывающие окна
-from PIL import Image, ImageTk, ImageOps, ImageEnhance  # Библиотека для работы с изображениями:
-# Image - загрузка/сохранение, ImageTk - интеграция с Tkinter, ImageEnhance - коррекция изображений
-import cv2  # OpenCV - основная библиотека компьютерного зрения
-import numpy as np  # NumPy - библиотека для математических операций с массивами
-import os  # Для работы с файловой системой (получение размера файла и т.д.)
-from PIL.ExifTags import TAGS  # Для чтения EXIF-метаданных фотографий
-import matplotlib.pyplot as plt  # Для построения графиков и гистограмм
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg  # Для встраивания графиков в Tkinter
-
+import tkinter as tk
+from tkinter import ttk, filedialog, messagebox
+from PIL import Image, ImageTk, ImageOps, ImageEnhance
+import cv2
+import numpy as np
+import os
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 class ImageProcessorApp:
     def __init__(self, root):
-        # Конструктор класса - инициализация приложения
         self.root = root  # Главное окно приложения
         self.root.title("Image Processor App")  # Заголовок окна
         self.root.geometry("1200x800")  # Размер окна (ширина x высота)
@@ -28,7 +22,6 @@ class ImageProcessorApp:
         self.setup_ui()  # Создаем интерфейс
 
     def setup_ui(self):
-        # Главный фрейм
         # Настройка темы и стилей (только визуальные изменения)
         style = ttk.Style()
         try:
@@ -68,7 +61,12 @@ class ImageProcessorApp:
         preview_frame = ttk.Labelframe(right_panel, text='Предпросмотр', style='Card.TLabelframe')
         preview_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         preview_frame.columnconfigure(0, weight=1)
-        preview_frame.rowconfigure(0, weight=1)
+        preview_frame.columnconfigure(1, weight=1)
+        preview_frame.rowconfigure(1, weight=1)
+
+        # Заголовки над изображениями
+        ttk.Label(preview_frame, text='Исходное', style='Header.TLabel').grid(row=0, column=0, padx=5, pady=(5, 0), sticky=tk.W)
+        ttk.Label(preview_frame, text='Обработанное', style='Header.TLabel').grid(row=0, column=1, padx=5, pady=(5, 0), sticky=tk.W)
 
         # Все твои элементы — в left_panel, как раньше
         ttk.Button(left_panel, text="Загрузить изображение",
@@ -118,9 +116,19 @@ class ImageProcessorApp:
         ttk.Button(left_panel, text="Сбросить изменения",
                    command=self.reset_changes).grid(row=16, column=0, pady=5, sticky=tk.W)
 
-        # Метка для изображения
+        # Ползунок гамма-коррекции (используется линейной и нелинейной коррекцией)
+        ttk.Separator(left_panel, orient='horizontal').grid(row=17, column=0, pady=8, sticky=tk.W + tk.E)
+        ttk.Label(left_panel, text="Гамма:").grid(row=18, column=0, pady=5, sticky=tk.W)
+        self.gamma_var = tk.DoubleVar(value=1.0)
+        ttk.Scale(left_panel, from_=0.2, to=3.0, variable=self.gamma_var,
+                  orient=tk.HORIZONTAL).grid(row=19, column=0, pady=5, sticky=tk.W + tk.E)
+
+        # Метки для изображений: слева исходное, справа обработанное
+        self.original_image_label = ttk.Label(preview_frame)
+        self.original_image_label.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
+
         self.image_label = ttk.Label(preview_frame)
-        self.image_label.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
+        self.image_label.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
 
         # Статус-бар
         self.status_label = ttk.Label(self.root, text='Готово', anchor='w', relief='sunken', padding=(10, 2))
@@ -148,16 +156,23 @@ class ImageProcessorApp:
 
     def display_image(self):
         # Отображение изображения в интерфейсе
-        if self.processed_image:
-            # Масштабируем изображение под размер окна
-            max_size = (800, 600)
-            image = self.processed_image.copy()  # Создаем копию
-            image.thumbnail(max_size, Image.Resampling.LANCZOS)  # Изменяем размер с высоким качеством
+        if self.original_image:
+            # Отображаем неизменяемое исходное изображение слева
+            left_max_size = (380, 600)
+            left_image = self.original_image.copy()
+            left_image.thumbnail(left_max_size, Image.Resampling.LANCZOS)
+            left_photo = ImageTk.PhotoImage(left_image)
+            self.original_image_label.configure(image=left_photo)
+            self.original_image_label.image = left_photo
 
-            # Конвертируем изображение для Tkinter
-            photo = ImageTk.PhotoImage(image) #данные изображения, которые Tkinter может отобразить.
-            self.image_label.configure(image=photo)  # Устанавливаем изображение в метку.  Виджет теперь знает, что ему нужно отрисовать это изображение.
-            self.image_label.image = photo  # Сохраняем ссылку (важно для предотвращения сборки мусора)
+        if self.processed_image:
+            # Отображаем текущее обработанное изображение справа
+            right_max_size = (380, 600)
+            right_image = self.processed_image.copy()
+            right_image.thumbnail(right_max_size, Image.Resampling.LANCZOS)
+            right_photo = ImageTk.PhotoImage(right_image)
+            self.image_label.configure(image=right_photo)
+            self.image_label.image = right_photo
 
     def update_image_info(self):
         # Обновление информации об изображении
@@ -166,7 +181,6 @@ class ImageProcessorApp:
 
         try:
             info = ""
-            # Информация о размере файла
             file_size = os.path.getsize(self.image_path)
             info += f"Размер файла: {file_size} байт ({file_size / 1024:.2f} KB)\n"
 
@@ -189,7 +203,6 @@ class ImageProcessorApp:
             if self.original_image.getexif():
                 info += "\nEXIF информация:\n"
 
-                # ЖЕСТКИЙ СПИСОК ТЕГОВ КОТОРЫЕ МЫ ХОТИМ ВЫВЕСТИ
                 target_tags = {
                     306: 'DateTime',  # Дата и время
                     272: 'Model',  # Модель камеры
@@ -333,42 +346,53 @@ class ImageProcessorApp:
         if not self.processed_image:
             return
 
-        # Конвертируем в формат OpenCV (numpy array)
-        if self.processed_image.mode == 'L':  # Grayscale
-            img_cv = np.array(self.processed_image)  # Просто конвертируем в массив
-            channels = ['Grayscale']
-            colors = ['black']
-        else:  # Color image
-            # Конвертируем PIL Image в numpy array и меняем цветовую модель RGB → BGR (для OpenCV)
-            img_cv = cv2.cvtColor(np.array(self.processed_image), cv2.COLOR_RGB2BGR)
-            channels = ['Blue', 'Green', 'Red']  # Каналы в порядке BGR
-            colors = ['b', 'g', 'r']  # Цвета для графиков
+        # Подготовка данных: исходное и обработанное изображения
+        def to_cv(img: Image.Image):
+            if img.mode == 'L':
+                return np.array(img), ['Grayscale'], ['black']
+            arr = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+            return arr, ['Blue', 'Green', 'Red'], ['b', 'g', 'r']
+
+        orig_cv, orig_channels, orig_colors = to_cv(self.original_image) if self.original_image else (None, [], [])
+        proc_cv, proc_channels, proc_colors = to_cv(self.processed_image)
 
         # Создаем новое окно для гистограммы
         hist_window = tk.Toplevel(self.root)  # Toplevel - дочернее окно
-        hist_window.title("Гистограмма изображения")
-        hist_window.geometry("800x600")
+        hist_window.title("Гистограмма: исходное (сверху) и обработанное (снизу)")
+        hist_window.geometry("900x700")
 
-        # Создаем график matplotlib
-        fig, ax = plt.subplots(figsize=(8, 6))
+        # Создаем 2 подграфика: сверху исходное, снизу обработанное
+        fig, (ax_top, ax_bottom) = plt.subplots(2, 1, figsize=(9, 7), sharex=True)
 
+        # Верх: исходное
+        if orig_cv is not None:
+            if self.original_image.mode == 'L':
+                hist = cv2.calcHist([orig_cv], [0], None, [256], [0, 256])
+                ax_top.plot(hist, color=orig_colors[0], label=orig_channels[0])
+            else:
+                for i, col in enumerate(orig_colors):
+                    hist = cv2.calcHist([orig_cv], [i], None, [256], [0, 256])
+                    ax_top.plot(hist, color=col, label=orig_channels[i])
+            ax_top.set_title('Исходное изображение')
+            ax_top.set_ylabel('Пиксели')
+            ax_top.legend()
+            ax_top.grid(True)
+
+        # Низ: обработанное
         if self.processed_image.mode == 'L':
-            # Вычисляем гистограмму для grayscale
-            # calcHist([изображения], [каналы], маска, [количество бинов], [диапазон])
-            hist = cv2.calcHist([img_cv], [0], None, [256], [0, 256])
-            ax.plot(hist, color=colors[0], label=channels[0])  # Рисуем график
+            hist = cv2.calcHist([proc_cv], [0], None, [256], [0, 256])
+            ax_bottom.plot(hist, color=proc_colors[0], label=proc_channels[0])
         else:
-            # Для цветного изображения рисуем гистограммы для каждого канала
-            for i, col in enumerate(colors):
-                hist = cv2.calcHist([img_cv], [i], None, [256], [0, 256])
-                ax.plot(hist, color=col, label=channels[i])
+            for i, col in enumerate(proc_colors):
+                hist = cv2.calcHist([proc_cv], [i], None, [256], [0, 256])
+                ax_bottom.plot(hist, color=col, label=proc_channels[i])
+        ax_bottom.set_title('Обработанное изображение')
+        ax_bottom.set_xlabel('Уровень интенсивности')
+        ax_bottom.set_ylabel('Пиксели')
+        ax_bottom.legend()
+        ax_bottom.grid(True)
 
-        # Настраиваем внешний вид графика
-        ax.set_title('Гистограмма изображения')
-        ax.set_xlabel('Уровень интенсивности')  # По X - значения яркости (0-255)
-        ax.set_ylabel('Количество пикселей')  # По Y - количество пикселей с данной яркостью
-        ax.legend()  # Показываем легенду
-        ax.grid(True)  # Включаем сетку
+        fig.tight_layout()
 
         # Встраиваем график в Tkinter окно
         canvas = FigureCanvasTkAgg(fig, master=hist_window)
@@ -387,16 +411,34 @@ class ImageProcessorApp:
 
     def linear_correction(self):
         # Линейное растяжение гистограммы (улучшение контраста)
-        if self.processed_image and self.processed_image.mode == 'L':  # Только для grayscale
+        if self.processed_image:
             try:
-                img_array = np.array(self.processed_image)  # Конвертируем в numpy array
-                # Линейное растяжение: (x - min) * (255 / (max - min))
-                min_val = np.min(img_array)  # Минимальное значение яркости
-                max_val = np.max(img_array)  # Максимальное значение яркости
-                corrected = (img_array - min_val) * (255.0 / (max_val - min_val))
-                # Конвертируем обратно в PIL Image
+                # Приводим к оттенкам серого на время коррекции (работает и для RGB-фото)
+                gray_img = self.processed_image.convert('L')
+                # ВАЖНО: работаем в float, чтобы избежать переполнений uint8 при (x - min)
+                img_array = np.array(gray_img).astype('float32')
+                # Растяжение по перцентилям (устойчивее, даёт видимый эффект)
+                p_low, p_high = np.percentile(img_array, (1, 99))
+                if p_high == p_low:
+                    # Плоская гистограмма — изменений не будет
+                    messagebox.showinfo("Информация", "Линейная коррекция: нет диапазона яркостей (изображение однородное).")
+                    return
+                corrected = (img_array - p_low) * (255.0 / (p_high - p_low))
+                # Доп. гамма-коррекция поверх линейного растяжения, если ползунок не 1.0
+                gamma = float(self.gamma_var.get()) if hasattr(self, 'gamma_var') else 1.0
+                if abs(gamma - 1.0) > 1e-3:
+                    safe_gamma = max(1e-6, gamma)
+                    base = np.clip(corrected, 0.0, 255.0) / 255.0
+                    base = np.maximum(base, 1e-12)
+                    corrected = 255.0 * (base ** (1.0 / safe_gamma))
+                corrected = np.clip(corrected, 0, 255)
+                corrected = np.nan_to_num(corrected, nan=0.0, posinf=255.0, neginf=0.0)
                 self.processed_image = Image.fromarray(corrected.astype('uint8'))
                 self.display_image()
+                try:
+                    self.status_label.configure(text=f"Линейная коррекция: p1={p_low:.1f}, p99={p_high:.1f}, gamma={gamma:.2f}")
+                except Exception:
+                    pass
             except Exception as e:
                 messagebox.showerror("Ошибка", f"Не удалось применить линейную коррекцию: {str(e)}")
 
@@ -406,8 +448,13 @@ class ImageProcessorApp:
             try:
                 img_array = np.array(self.processed_image).astype('float32')  # Конвертируем в float
                 # Гамма-коррекция: 255 * (x/255)^(1/гамма)
-                gamma = 1.5  # Коэффициент гамма-коррекции
-                corrected = 255 * (img_array / 255) ** (1 / gamma)
+                gamma = float(self.gamma_var.get()) if hasattr(self, 'gamma_var') else 1.5
+                safe_gamma = max(1e-6, gamma)
+                base = np.clip(img_array / 255.0, 0.0, 1.0)
+                base = np.maximum(base, 1e-12)
+                corrected = 255.0 * (base ** (1.0 / safe_gamma))
+                corrected = np.clip(corrected, 0.0, 255.0)
+                corrected = np.nan_to_num(corrected, nan=0.0, posinf=255.0, neginf=0.0)
                 # Конвертируем обратно в 8-битное изображение
                 self.processed_image = Image.fromarray(corrected.astype('uint8'))
                 self.display_image()
@@ -485,8 +532,5 @@ def main():
     app = ImageProcessorApp(root)  # Создаем экземпляр нашего приложения
     root.mainloop()  # Запускаем главный цикл обработки событий (как в Java Swing)
 
-
-# Стандартная конструкция для Python:
-# Если этот файл запущен напрямую (а не импортирован как модуль)
 if __name__ == "__main__":
-    main()  # Вызываем главную функцию
+    main()
