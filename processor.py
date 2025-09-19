@@ -114,14 +114,14 @@ class ImageProcessorApp:
                    command=self.nonlinear_correction).grid(row=15, column=0, pady=5, sticky=tk.W)
 
         ttk.Button(left_panel, text="Сбросить изменения",
-                   command=self.reset_changes).grid(row=16, column=0, pady=5, sticky=tk.W)
+                   command=self.reset_changes).grid(row=18, column=0, pady=5, sticky=tk.W)
 
         # Ползунок гамма-коррекции (используется линейной и нелинейной коррекцией)
         ttk.Separator(left_panel, orient='horizontal').grid(row=17, column=0, pady=8, sticky=tk.W + tk.E)
-        ttk.Label(left_panel, text="Гамма:").grid(row=18, column=0, pady=5, sticky=tk.W)
+        ttk.Label(left_panel, text="Гамма:").grid(row=16, column=0, pady=5, sticky=tk.W)
         self.gamma_var = tk.DoubleVar(value=1.0)
         ttk.Scale(left_panel, from_=0.2, to=3.0, variable=self.gamma_var,
-                  orient=tk.HORIZONTAL).grid(row=19, column=0, pady=5, sticky=tk.W + tk.E)
+                  orient=tk.HORIZONTAL).grid(row=17, column=0, pady=5, sticky=tk.W + tk.E)
 
         # Метки для изображений: слева исходное, справа обработанное
         self.original_image_label = ttk.Label(preview_frame)
@@ -527,10 +527,9 @@ class VerticalScrolledFrame(ttk.Frame):
         canvas.bind('<Configure>', _configure_canvas)
 
 def main():
-    # Главная функция приложения
-    root = tk.Tk()  # Создаем главное окно Tkinter
-    app = ImageProcessorApp(root)  # Создаем экземпляр нашего приложения
-    root.mainloop()  # Запускаем главный цикл обработки событий (как в Java Swing)
+    root = tk.Tk()
+    app = ImageProcessorApp(root)
+    root.mainloop()
 
 if __name__ == "__main__":
     main()
